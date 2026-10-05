@@ -31,7 +31,7 @@ public class ConversionUtils {
         return brightnesVals;
     }
 
-    public BufferedImage downsize(BufferedImage initial_image, int dstW, int dstH) {
+    public static BufferedImage downsize(BufferedImage initial_image, int dstW, int dstH) {
 
         // Preserve type for the image
         BufferedImage result = new BufferedImage(dstW, dstH, BufferedImage.TYPE_INT_RGB);
@@ -59,7 +59,7 @@ public class ConversionUtils {
 
                 for (int m = iy0; m < iy1; m++) {
                     for (int n = id0; n < id1; n++) {
-                        int rgb = initial_image.getRGB(n,m);
+                        int rgb = initial_image.getRGB(n, m);
 
                         // Should work without parenthesis, because >> goes before & . Either way added fore readability
                         sumR += (rgb >> 16) & 0xFF;
