@@ -31,6 +31,26 @@ public class ConversionUtils {
         return brightnesVals;
     }
 
+    /*
+    It is simple method used for downsizing. Considering we use in base image 4*4 coverted to 2*2
+    the method is basic one used for large size downscaling, the box averaging.
+
+    Since al pixels in image are stored in the cell has its own int value (24 bits with 8 bits per R G B colors)
+    The method simply calculates first ratio of initial image to its final size and by that determines of where the box
+    representing each pixel is located at.
+    The values to represent final image and box are simply put as:
+    dx,dy: pixels in final image we pass through in a cycle as we set them in final image.
+    The cell in initial image defined by following parameters (idy0,id1) initial and final y position (same principle for idx0,idx1)
+    Values for rgb are being transferred for each channel in separate value and then average is used for final image representation.
+
+    |1|5|2|4|
+    |1|1|4|2|
+    |0|2|1|5|   |2|3|
+    |1|1|7|3|   |1|4|
+    The method is slightly modified and uses overload of getRGB by taking batch of pixels instead of individual ones, basically going
+    line by line instead of one by one. but principle is still same.
+    */
+
     public static BufferedImage downsize(BufferedImage initial_image, int dstW, int dstH) {
 
         // Preserve type for the image
@@ -39,42 +59,49 @@ public class ConversionUtils {
         double ratioW = (double) initial_image.getWidth() / dstW;
         double ratioH = (double) initial_image.getHeight() / dstH;
 
-        //Loop for painting each of resized pixels
+        //  Loop for painting each of resized pixels
 
         for (int dy = 0; dy < dstH; dy++) {
+
+            int[] finalRow = new int[dstW];
             for (int dx = 0; dx < dstW; dx++) {
-                //Loop to find average for each cell
-                int count = 0;
+                // Values to store the RGB channels and sum them up (sinec each channel in integer has only
+                // 8 bits for each channel, summing them up must be made in the separate value for each color
                 int sumR = 0;
                 int sumG = 0;
                 int sumB = 0;
 
-                // Values for border  start/end on the ceiling of compressed area in initial image
+                // Values for border  start/end on the ceiling (y-axis) of compressed area in initial image
                 int iy0 = (int) Math.floor(dy * ratioH);
                 int iy1 = (int) Math.floor((dy + 1) * ratioH);
+                int idy = iy1 - iy0;
 
-                // Values for border start/end on the width of compressed area in initial image
-                int id0 = (int) Math.floor(dx * ratioW);
-                int id1 = (int) Math.floor((dx + 1) * ratioW);
+                // Values for border start/end on the width (x-axis) of compressed area in initial image
+                int ix0 = (int) Math.floor(dx * ratioW);
+                int ix1 = (int) Math.floor((dx + 1) * ratioW);
+                int idx = ix1 - ix0;
 
-                for (int m = iy0; m < iy1; m++) {
-                    for (int n = id0; n < id1; n++) {
-                        int rgb = initial_image.getRGB(n, m);
+                // Will throw exception if cellSize goes 0, but app has brakes at form inputs to prevent that
+                int cellSize = idx*idy;
+                int[] cell = new int[cellSize];
+                initial_image.getRGB(ix0, iy0, idx, idy, cell, 0, idx);
 
-                        // Should work without parenthesis, because >> goes before & . Either way added fore readability
-                        sumR += (rgb >> 16) & 0xFF;
-                        sumG += (rgb >> 8) & 0xFF;
-                        sumB += (rgb) & 0xFF;
-                        count++;
-                    }
+                for (int ipx = 0; ipx < cellSize; ipx++) {
+
+                    int rgb = cell[ipx];
+
+                    // Should work without parenthesis, because >> goes before & . Either way added fore readability
+                    sumR += (rgb >> 16) & 0xFF;
+                    sumG += (rgb >> 8) & 0xFF;
+                    sumB += (rgb) & 0xFF;
 
                 }
 
-                //Count pixel rgb correctly and move to appropriate bytes, then assemble with | into full value.
-                // << goes before / so parenthesis should not be removed
-                int pixel = ((sumR / count) << 16) | ((sumG / count) << 8) | (sumB / count);
-                result.setRGB(dx, dy, pixel);
+                // Pack the averaged channels into an ARGB int: R in bits 16-23, G in 8-15, B in 0-7
+                int pixel = ((sumR / cellSize) << 16) | ((sumG / cellSize) << 8) | (sumB / cellSize);
+                finalRow[dx] = pixel;
             }
+            result.setRGB(0, dy, dstW, 1, finalRow, 0, dstW);
         }
 
         return result;

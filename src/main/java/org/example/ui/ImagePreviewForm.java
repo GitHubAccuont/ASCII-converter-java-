@@ -16,6 +16,8 @@ import java.io.IOException;
 
 public class ImagePreviewForm {
 
+    private float fontSize = 10f;
+    private boolean copyToClipboard = false;
 
     private JSlider gammaSlider;
     private JSlider contrastSlider;
@@ -27,6 +29,10 @@ public class ImagePreviewForm {
     private JTextArea outputText;
     private JButton processButton;
     private JButton fileSelectionButton;
+    private JLabel contrastValueDisplay;
+    private JLabel gammaValueDisplay;
+    private JCheckBox clipboardOptionCheckbox;
+    private JLabel imageSizeLabel;
 
     private final SimpleConverter converter;
     private File file;
@@ -34,9 +40,45 @@ public class ImagePreviewForm {
     public ImagePreviewForm() {
         attachFileSelectionHandler();
         attachProcessHandler();
+        attachUiControls();
+        attachPreviewControls();
 
         outputText.setFont(new Font("Monospaced", Font.PLAIN, 12));
         converter = new SimpleConverter();
+    }
+
+    private void attachPreviewControls() {
+        outputText.addMouseWheelListener(e -> {
+            if (e.isControlDown()) {
+                if (e.getWheelRotation() != 0) {
+                    if (e.getWheelRotation() < 0) {
+                        fontSize += 0.1f;
+                    } else {
+                        fontSize -= 0.1f;
+                    }
+                    fontSize = Math.clamp(fontSize, 1f, 40f);
+                    outputText.setFont(outputText.getFont().deriveFont(fontSize));
+                }
+
+            }
+        });
+    }
+
+    private void attachUiControls() {
+
+        contrastSlider.addChangeListener(e -> {
+            contrastValueDisplay
+                    .setText(
+                            String.format("%.2f", ((double) contrastSlider.getValue() / 100)));
+        });
+        gammaSlider.addChangeListener(e -> {
+            gammaValueDisplay
+                    .setText(
+                            String.format("%.2f", ((double) gammaSlider.getValue() / 100)));
+        });
+        clipboardOptionCheckbox.addChangeListener(e -> {
+            copyToClipboard = clipboardOptionCheckbox.isSelected();
+        });
     }
 
 
@@ -55,10 +97,14 @@ public class ImagePreviewForm {
             if (result == JFileChooser.APPROVE_OPTION) {
 
                 file = chooser.getSelectedFile();
-                selectedFileLabel.setText("Selected file:" + file.getAbsolutePath());
-                return;
+                String name = file.getName();
+                if (name.length() > 30) {
+                    name = name.substring(0, 27) + "...";
+                }
+                selectedFileLabel.setText("Selected: " + name);
+            } else if (result == JFileChooser.CANCEL_OPTION) {
+                JOptionPane.showMessageDialog(null, "No correct file was selected");
             }
-            JOptionPane.showMessageDialog(null, "No correct file was selected");
         });
     }
 
@@ -71,6 +117,7 @@ public class ImagePreviewForm {
             BufferedImage image;
             try {
                 image = ImageIO.read(file);
+                imageSizeLabel.setText("Current size:" + image.getWidth() + "x" + image.getHeight() + "px");
 
                 if (!syncConverterFromUi()) {
 
@@ -86,10 +133,13 @@ public class ImagePreviewForm {
 
                 outputText.setText(result);
                 // Add result to clipboard immidiately (remove?)
-                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-                clipboard.setContents(new StringSelection(result), null);
+                if (copyToClipboard) {
+                    Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                    clipboard.setContents(new StringSelection(result), null);
+                }
             } catch (IOException ex) {
-                throw new RuntimeException(ex);
+                JOptionPane.showMessageDialog(null, "Could not read the image file.");
+
             }
         });
 
