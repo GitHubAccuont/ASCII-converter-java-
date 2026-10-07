@@ -20,7 +20,9 @@ jobs:
           cache: 'maven'
 
       - name: Build jar with maven
-        run: ./mvnw -B package --file pom.xml
+        run: |
+          chmod +x mvnw
+          ./mvnw -B package --file pom.xml
 
       - name: Publish artifact
         uses: actions/upload-artifact@v7
@@ -56,18 +58,22 @@ jobs:
 
       - name: Make Jpackage exe file
         run: |
-          jpackage `
+          jpackage --type app-image `
           --input target/jpackage-input `
           --dest target `
           --name "AsciiConverter" `
           --main-jar image-to-ascii.jar `
           --main-class org.example.Main
 
+      - name: Archive the result
+        run: |
+          Compress-Archive -Path target\AsciiConverter -DestinationPath target\AsciiConverter-Windows.zip
+
       - name: Publish artifact
         uses: actions/upload-artifact@v7
         with:
-          name: artifact-exe
-          path: target/*.exe
+          name: artifact-exe-archive
+          path: target/AsciiConverter-Windows.zip
 
   drop-release:
     runs-on: ubuntu-latest
@@ -87,7 +93,7 @@ jobs:
       - name: Download EXE
         uses: actions/download-artifact@v7
         with:
-          name: artifact-exe
+          name: artifact-exe-archive
           path: release-assets/
 
       - name: Create Release
