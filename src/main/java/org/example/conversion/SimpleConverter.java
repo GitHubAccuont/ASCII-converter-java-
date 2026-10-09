@@ -65,7 +65,7 @@ public class SimpleConverter {
 
                 double adjusted = Math.pow(brightnessGrid[dy][dx], gamma);
                 adjusted = (adjusted - 0.5) * contrast + 0.5;
-                adjusted = Math.clamp(adjusted, 0.0, 1.0);
+                adjusted = Math.max(Math.min(adjusted, 1.0), 0.0);
                 sb.append(palette.charAt((int) ((palette.length() - 1) * adjusted)));
             }
             sb.append('\n');

@@ -10,10 +10,12 @@ to size up or down the font used for displaying the text. All of UI elements are
 java Swing UI so there shouldn't be issues with running it on different machines UI-wise.
 
 ## Limitations
-One limitation is that in code was used `Math.Clamp` which limits app usage to java [21+ version](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Math.html#clamp(float,float,float)). 
-Feel free to modify that yourself if you want to use it on older versions, i did not have a constraints so its the one i used.
+~~One limitation is that in code was used `Math.Clamp`~~
+That one is fixed so it should run on java versions 8 and above. The workflow for creating exe
+still uses `java 21`, but it shouldn't matter as it doesnt compile anything and only reason to use this 
+version is the fact that stable jpackage was added at `java 16` version
 
-The other restriction is that app currently is only able to output images of lesser size than the original or equal 
+The only restriction is that app currently is only able to output images of lesser size than the original or equal 
 because [box averaging](https://en.wikipedia.org/wiki/Box_blur) is method i used for downscaling,
 and the only other way to resize/upscale would be interpolation. 
 In practice upscaling isn't needed here anyway, since each character occupies real space, so even a 1:1 mapping would produce a large text output.
